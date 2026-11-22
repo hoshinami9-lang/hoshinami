@@ -14,6 +14,19 @@ const mediaFields = `
   bannerImage description(asHtml:false)
   averageScore episodes seasonYear genres format status duration
   studios(isMain:true) { nodes { name } }
+  relations {
+    edges {
+      relationType(version:2)
+      node {
+        id
+        title { romaji english }
+        format
+        seasonYear
+        episodes
+        status
+      }
+    }
+  }
 `;
 
 const POPULAR = `query {
