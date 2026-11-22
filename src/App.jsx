@@ -12,7 +12,7 @@ const mediaFields = `
   id title { romaji english }
   coverImage { extraLarge large }
   bannerImage description(asHtml:false)
-  averageScore episodes seasonYear genres format status duration
+  averageScore episodes season seasonYear genres format status duration
   studios(isMain:true) { nodes { name } }
   relations {
     edges {
