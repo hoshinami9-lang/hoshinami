@@ -133,13 +133,30 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && supabase) {
-      loadUserData();
-    } else {
-      setWatchlist([]);
-      setReviews([]);
-    }
-  }, [user]);
+  if (!supabase) return;
+
+  loadPublicReviews();
+
+  if (user) {
+    loadUserData();
+  } else {
+    setWatchlist([]);
+  }
+}, [user]);
+
+async function loadPublicReviews() {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id, anime_id, anime_title, score, body, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Reviews loading error:', error.message);
+    return;
+  }
+
+  setReviews(data || []);
+}
 
   async function loadUserData() {
     const [{ data: saved }, { data: written }] = await Promise.all([
