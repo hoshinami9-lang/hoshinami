@@ -159,14 +159,18 @@ async function loadPublicReviews() {
 }
 
   async function loadUserData() {
-    const [{ data: saved }, { data: written }] = await Promise.all([
-      supabase.from('watchlist')
-        .select('anime_id, anime_title, cover_image, status'),
+  const { data: saved, error } = await supabase
+    .from('watchlist')
+    .select('anime_id, anime_title, cover_image, status');
 
-      supabase.from('reviews')
-        .select('id, anime_id, anime_title, score, body, created_at')
-        .order('created_at', { ascending: false })
-    ]);
+  if (error) {
+    console.error('Watchlist loading error:', error.message);
+    setError('Could not load your watchlist. Please try again.');
+    return;
+  }
+
+  setWatchlist(saved || []);
+}
 
     setWatchlist(saved || []);
     setReviews(written || []);
