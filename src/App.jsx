@@ -172,10 +172,6 @@ async function loadPublicReviews() {
   setWatchlist(saved || []);
 }
 
-    setWatchlist(saved || []);
-    setReviews(written || []);
-  }
-
   async function doSearch(e) {
     e?.preventDefault();
 
