@@ -99,6 +99,9 @@ function App() {
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState('');
   const [reviewScore, setReviewScore] = useState('8');
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [editReviewText, setEditReviewText] = useState('');
+  const [editReviewScore, setEditReviewScore] = useState('8');
 
   useEffect(() => {
     Promise.all([gql(POPULAR), gql(TRENDING)])
@@ -147,7 +150,7 @@ function App() {
 async function loadPublicReviews() {
   const { data, error } = await supabase
     .from('reviews')
-    .select('id, anime_id, anime_title, score, body, created_at')
+    .select('id, user_id, anime_id, anime_title, score, body, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -369,7 +372,79 @@ async function loadPublicReviews() {
       setReviewText('');
     }
   }
+function startEditReview(review) {
+  setEditingReviewId(review.id);
+  setEditReviewText(review.body);
+  setEditReviewScore(String(review.score));
+}
 
+function cancelEditReview() {
+  setEditingReviewId(null);
+  setEditReviewText('');
+  setEditReviewScore('8');
+}
+
+async function saveEditedReview(reviewId) {
+  if (!user || !supabase) return;
+
+  if (!editReviewText.trim()) {
+    setError('Review cannot be empty.');
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('reviews')
+    .update({
+      body: editReviewText.trim(),
+      score: Number(editReviewScore)
+    })
+    .eq('id', reviewId)
+    .eq('user_id', user.id)
+    .select('id, user_id, anime_id, anime_title, score, body, created_at')
+    .single();
+
+  if (error) {
+    setError(error.message);
+    return;
+  }
+
+  setReviews(current =>
+    current.map(review =>
+      review.id === reviewId ? data : review
+    )
+  );
+
+  cancelEditReview();
+}
+
+async function deleteReview(reviewId) {
+  if (!user || !supabase) return;
+
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this review? This cannot be undone.'
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    setError(error.message);
+    return;
+  }
+
+  setReviews(current =>
+    current.filter(review => review.id !== reviewId)
+  );
+
+  if (editingReviewId === reviewId) {
+    cancelEditReview();
+  }
+}  
   const displayed = query.trim() ? results : anime;
   const isSaved = a => watchlist.some(w => w.anime_id === a.id);
 
@@ -657,17 +732,61 @@ async function loadPublicReviews() {
                 : <p className="muted">Sign in to write a review.</p>
               }
 
-              {reviews
-                .filter(r => r.anime_id === selected.id)
-                .slice(0, 5)
-                .map(r => (
-                  <div className="review-card" key={r.id}>
-                    <b>{r.score}/10</b>
-                    <span>{r.body}</span>
-                  </div>
-                ))
-              }
+              
+{reviews
+  .filter(r => r.anime_id === selected.id)
+  .slice(0, 5)
+  .map(r => (
+    <div className="review-card" key={r.id}>
+      {editingReviewId === r.id ? (
+        <div>
+          <select
+            value={editReviewScore}
+            onChange={e => setEditReviewScore(e.target.value)}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+              <option key={n} value={n}>
+                {n}/10
+              </option>
+            ))}
+          </select>
+
+          <textarea
+            value={editReviewText}
+            onChange={e => setEditReviewText(e.target.value)}
+            placeholder="Edit your review..."
+          />
+
+          <button onClick={() => saveEditedReview(r.id)}>
+            Save
+          </button>
+
+          <button onClick={cancelEditReview}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <>
+          <b>{r.score}/10</b>
+          <span>{r.body}</span>
+
+          {user && r.user_id === user.id && (
+            <div className="review-actions">
+              <button onClick={() => startEditReview(r)}>
+                Edit
+              </button>
+
+              <button onClick={() => deleteReview(r.id)}>
+                Delete
+              </button>
             </div>
+          )}
+        </>
+      )}
+    </div>
+  ))
+}
+          </div>
           </div>
         </div>
       )}
